@@ -1,0 +1,22 @@
+Testing Structure (New)
+These prompts test the new "Strict Architectural Rules" and "Floor Slabs":
+
+"Two storey modern house" -> Forces exactly 2 floors (6.4m height) with visible floor separation.
+"Three storey office building" -> Creates a tall 3-floor structure with aligned windows.
+"Tall double decker home" -> Also triggers the 2-storey logic.
+📐 Testing Complex Shapes
+These prompts trigger the L-Shaped compound footprint logic:
+
+"Large modern villa" -> "Villa" is a keyword that triggers the L-shape wing.
+"L-shaped brick estate" -> Explicitly asks for the shape.
+"Sprawling ranch complex" -> "Complex" and "Ranch" also trigger the compound layout.
+🎨 Testing Styles & Materials
+"Classic brick cottage with gable roof" -> Triggers: Brick material, pitched roof, arched windows (if classic), and chimney-style aesthetics.
+"Minimalist concrete box" -> Triggers: Modern style, flat roof, floor-to-ceiling windows.
+"Traditional timber home" -> Triggers: Wood material, standard windows, classic door.
+🖼️ Testing Details
+"Modern glass home with forest surroundings" -> Triggers: "Forest" environment (darker ground, different ambience).
+"Industrial stone warehouse" -> Triggers: Stone material, industrial door style.
+Try this combo for a full test:
+
+"Large three storey L-shaped modern concrete villa with floor to ceiling windows"
