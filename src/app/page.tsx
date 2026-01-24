@@ -117,7 +117,7 @@ export default function Home() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <div className="text-slate-500 text-[10px] uppercase tracking-wider mb-1">Total Cost</div>
-                  <div className="text-xl font-bold text-emerald-400">${cost.toLocaleString('en-US')}</div>
+                  <div className="text-xl font-bold text-emerald-400">₹{cost.toLocaleString('en-IN')}</div>
                 </div>
                 <div>
                   <div className="text-slate-500 text-[10px] uppercase tracking-wider mb-1">Timeline</div>
@@ -128,15 +128,15 @@ export default function Home() {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-400">Materials</span>
-                  <span>$ {Math.floor(cost * 0.4).toLocaleString('en-US')}</span>
+                  <span>₹ {Math.floor(cost * 0.4).toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-400">Labor</span>
-                  <span>$ {Math.floor(cost * 0.35).toLocaleString('en-US')}</span>
+                  <span>₹ {Math.floor(cost * 0.35).toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-400">Overhead</span>
-                  <span>$ {Math.floor(cost * 0.25).toLocaleString('en-US')}</span>
+                  <span>₹ {Math.floor(cost * 0.25).toLocaleString('en-IN')}</span>
                 </div>
               </div>
             </div>

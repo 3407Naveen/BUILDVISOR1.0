@@ -31,8 +31,16 @@ export interface BuildingParams {
     interiorLightTemp: 'warm' | 'neutral' | 'cool'
 }
 
+export interface Project {
+    id: string;
+    name: string;
+    params: BuildingParams;
+    timestamp: number;
+}
+
 interface BuildingState {
     params: BuildingParams
+    projects: Project[]
     viewMode: 'exterior' | 'interior'
     lightingMode: 'day' | 'evening' | 'night'
     activeFloor: number | null
@@ -44,6 +52,9 @@ interface BuildingState {
     setActiveFloor: (floor: number | null) => void
     setHoveredElement: (element: string | null) => void
     setSelectedElement: (element: string | null) => void
+    saveProject: (name: string) => void
+    deleteProject: (id: string) => void
+    loadProject: (project: Project) => void
     resetParams: () => void
 }
 
@@ -68,26 +79,57 @@ const defaultParams: BuildingParams = {
     floorCount: 2,
 }
 
-export const useBuildingStore = create<BuildingState>((set) => ({
-    params: defaultParams,
-    viewMode: 'exterior', // Default view
-    lightingMode: 'day', // Default lighting
-    activeFloor: null,
-    hoveredElement: null,
-    selectedElement: null,
-    setParams: (newParams) =>
-        set((state) => ({ params: { ...state.params, ...newParams } })),
-    setViewMode: (mode) => set({ viewMode: mode }),
-    setLightingMode: (mode) => set({ lightingMode: mode }),
-    setActiveFloor: (floor) => set({ activeFloor: floor }),
-    setHoveredElement: (element) => set({ hoveredElement: element }),
-    setSelectedElement: (element) => set({ selectedElement: element }),
-    resetParams: () => set({
+export const useBuildingStore = create<BuildingState>((set) => {
+    // Helper to load projects from localStorage
+    const getStoredProjects = (): Project[] => {
+        if (typeof window === 'undefined') return []
+        const stored = localStorage.getItem('buildvisor_projects')
+        return stored ? JSON.parse(stored) : []
+    }
+
+    return {
         params: defaultParams,
+        projects: getStoredProjects(),
         viewMode: 'exterior',
         lightingMode: 'day',
         activeFloor: null,
         hoveredElement: null,
-        selectedElement: null
-    }),
-}))
+        selectedElement: null,
+        setParams: (newParams) =>
+            set((state) => ({ params: { ...state.params, ...newParams } })),
+        setViewMode: (mode) => set({ viewMode: mode }),
+        setLightingMode: (mode) => set({ lightingMode: mode }),
+        setActiveFloor: (floor) => set({ activeFloor: floor }),
+        setHoveredElement: (element) => set({ hoveredElement: element }),
+        setSelectedElement: (element) => set({ selectedElement: element }),
+        saveProject: (name) => set((state) => {
+            const newProject: Project = {
+                id: Math.random().toString(36).substr(2, 9),
+                name,
+                params: { ...state.params },
+                timestamp: Date.now()
+            }
+            const updatedProjects = [...state.projects, newProject]
+            localStorage.setItem('buildvisor_projects', JSON.stringify(updatedProjects))
+            return { projects: updatedProjects }
+        }),
+        deleteProject: (id) => set((state) => {
+            const updatedProjects = state.projects.filter(p => p.id !== id)
+            localStorage.setItem('buildvisor_projects', JSON.stringify(updatedProjects))
+            return { projects: updatedProjects }
+        }),
+        loadProject: (project) => set({
+            params: project.params,
+            viewMode: 'exterior',
+            activeFloor: null
+        }),
+        resetParams: () => set({
+            params: defaultParams,
+            viewMode: 'exterior',
+            lightingMode: 'day',
+            activeFloor: null,
+            hoveredElement: null,
+            selectedElement: null
+        }),
+    }
+})

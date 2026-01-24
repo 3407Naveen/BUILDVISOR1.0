@@ -32,7 +32,7 @@ export function Scene() {
                 <Grid position={[0, -0.11, 0]} args={[50, 50]} cellColor="#4a4a4a" sectionColor="#2a2a2a" fadeDistance={30} infiniteGrid />
 
                 <OrbitControls makeDefault minPolarAngle={0} maxPolarAngle={Math.PI / 2.1} enableDamping={true} dampingFactor={0.1} />
-                <Environment preset="city" />
+                <Environment preset="sunset" />
             </Canvas>
         </div>
     )
