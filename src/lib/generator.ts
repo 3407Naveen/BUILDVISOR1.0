@@ -78,8 +78,13 @@ export function parsePrompt(prompt: string): BuildingParams {
         // Phase 3 & 4 Fields
         footprintShape,
         wingParams,
-        floorCount
+        floorCount,
+
+        // Interior Settings
+        furnitureDensity: 'standard',
+        interiorLightTemp: 'warm'
     }
+
 }
 
 export function calculateCost(params: BuildingParams): number {
