@@ -1,9 +1,35 @@
 'use client'
 
-import { Canvas } from '@react-three/fiber'
+import { Canvas, useThree } from '@react-three/fiber'
 import { OrbitControls, Environment, Grid, ContactShadows } from '@react-three/drei'
 import { BuildingRenderer } from './BuildingRenderer'
 import { useBuildingStore } from '@/store/buildingStore'
+import { useEffect, useRef } from 'react'
+
+function ScreenshotHandler() {
+    const { gl, scene, camera } = useThree()
+    const screenshotTrigger = useBuildingStore(state => state.screenshotTrigger)
+    const isFirstRun = useRef(true)
+
+    useEffect(() => {
+        // Skip first run
+        if (isFirstRun.current) {
+            isFirstRun.current = false
+            return
+        }
+
+        // Need to render the scene right before capturing to ensure non-empty buffer
+        gl.render(scene, camera)
+        const dataUrl = gl.domElement.toDataURL('image/png')
+
+        const link = document.createElement('a')
+        link.download = `buildvisor-design-${Date.now()}.png`
+        link.href = dataUrl
+        link.click()
+    }, [screenshotTrigger, gl, scene, camera])
+
+    return null
+}
 
 export function Scene() {
     const { lightingMode } = useBuildingStore()
@@ -16,7 +42,12 @@ export function Scene() {
 
     return (
         <div className="w-full h-full min-h-[500px] w-full bg-slate-950 rounded-lg overflow-hidden relative">
-            <Canvas shadows camera={{ position: [15, 10, 15], fov: 45 }}>
+            <Canvas
+                shadows
+                camera={{ position: [15, 10, 15], fov: 45 }}
+                gl={{ preserveDrawingBuffer: true, alpha: true }}
+            >
+                <ScreenshotHandler />
                 <ambientLight intensity={lightingSettings.ambient} />
                 <directionalLight
                     position={[10, 20, 10]}

@@ -143,22 +143,55 @@ const RoomZone = ({ room }: { room: any }) => {
     }
     const color = colorMap[room.type] || '#94a3b8'
 
+    const wallMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#f1f5f9', roughness: 0.8 }), [])
+    const WALL_H = 2.8
+    const THICK = 0.1
+
     return (
-        <group position={[room.x, room.y + 0.05, room.z]} rotation={[-Math.PI / 2, 0, 0]}>
+        <group position={[room.x, room.y + 0.05, room.z]}>
             {/* Floor overlay */}
-            <mesh>
+            <mesh rotation={[-Math.PI / 2, 0, 0]}>
                 <planeGeometry args={[room.width, room.depth]} />
-                <meshBasicMaterial color={color} transparent opacity={0.15} side={THREE.DoubleSide} />
+                <meshBasicMaterial color={color} transparent opacity={0.10} side={THREE.DoubleSide} />
             </mesh>
-            {/* Border */}
-            <lineSegments>
+
+            {/* Border Lines */}
+            <lineSegments rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
                 <edgesGeometry args={[new THREE.PlaneGeometry(room.width, room.depth)]} />
-                <lineBasicMaterial color={color} transparent opacity={0.5} />
+                <lineBasicMaterial color={color} transparent opacity={0.6} />
             </lineSegments>
-            {/* Label */}
-            {/* Note: TextGeometry is heavy/complex in R3F raw. Using simple billboard check or just color for now. 
-                 Ideally use @react-three/drei Text but for now keeping it simple to avoid large imports if not already used heavily.
-             */}
+
+            {/* --- Walls --- */}
+            {/* Back Wall (-Z) */}
+            <mesh position={[0, WALL_H / 2, -room.depth / 2]} receiveShadow material={wallMat}>
+                <boxGeometry args={[room.width, WALL_H, THICK]} />
+            </mesh>
+
+            {/* Front Wall (+Z) - With Doorway Gap */}
+            <group position={[0, WALL_H / 2, room.depth / 2]}>
+                {/* Left Segment */}
+                <mesh position={[-(room.width / 2 - (room.width / 2 - 0.5) / 2), 0, 0]} material={wallMat}>
+                    <boxGeometry args={[room.width / 2 - 0.5, WALL_H, THICK]} />
+                </mesh>
+                {/* Right Segment */}
+                <mesh position={[(room.width / 2 - (room.width / 2 - 0.5) / 2), 0, 0]} material={wallMat}>
+                    <boxGeometry args={[room.width / 2 - 0.5, WALL_H, THICK]} />
+                </mesh>
+                {/* Header above door */}
+                <mesh position={[0, WALL_H / 2 - 0.2, 0]} material={wallMat}>
+                    <boxGeometry args={[1, 0.4, THICK]} />
+                </mesh>
+            </group>
+
+            {/* Left Wall (-X) */}
+            <mesh position={[-room.width / 2, WALL_H / 2, 0]} rotation={[0, Math.PI / 2, 0]} receiveShadow material={wallMat}>
+                <boxGeometry args={[room.depth, WALL_H, THICK]} />
+            </mesh>
+
+            {/* Right Wall (+X) */}
+            <mesh position={[room.width / 2, WALL_H / 2, 0]} rotation={[0, Math.PI / 2, 0]} receiveShadow material={wallMat}>
+                <boxGeometry args={[room.depth, WALL_H, THICK]} />
+            </mesh>
         </group>
     )
 }
@@ -219,21 +252,21 @@ export function InteriorRenderer() {
                     onPointerOut: handlePointerOut
                 }
 
-                const props = { key: idx, item }
+                const furnitureProps = { item }
 
                 return (
                     <group key={idx} {...interactProps}>
-                        {item.type === 'sofa' && <Sofa {...props} />}
-                        {item.type === 'bed' && <Bed {...props} />}
-                        {item.type === 'table' && <Table {...props} />}
-                        {item.type === 'kitchen_unit' && <KitchenUnit {...props} />}
-                        {item.type === 'wardrobe' && <Wardrobe {...props} />}
-                        {item.type === 'tv_unit' && <TVUnit {...props} />}
-                        {item.type === 'rug' && <Rug {...props} />}
-                        {item.type === 'shower' && <Shower {...props} />}
-                        {item.type === 'toilet' && <Toilet {...props} />}
-                        {item.type === 'vanity' && <Vanity {...props} />}
-                        {item.type === 'chair' && <Chair {...props} />}
+                        {item.type === 'sofa' && <Sofa {...furnitureProps} />}
+                        {item.type === 'bed' && <Bed {...furnitureProps} />}
+                        {item.type === 'table' && <Table {...furnitureProps} />}
+                        {item.type === 'kitchen_unit' && <KitchenUnit {...furnitureProps} />}
+                        {item.type === 'wardrobe' && <Wardrobe {...furnitureProps} />}
+                        {item.type === 'tv_unit' && <TVUnit {...furnitureProps} />}
+                        {item.type === 'rug' && <Rug {...furnitureProps} />}
+                        {item.type === 'shower' && <Shower {...furnitureProps} />}
+                        {item.type === 'toilet' && <Toilet {...furnitureProps} />}
+                        {item.type === 'vanity' && <Vanity {...furnitureProps} />}
+                        {item.type === 'chair' && <Chair {...furnitureProps} />}
                     </group>
                 )
             })}

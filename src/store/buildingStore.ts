@@ -29,6 +29,35 @@ export interface BuildingParams {
     floorCount: number
     furnitureDensity: 'minimal' | 'standard' | 'premium'
     interiorLightTemp: 'warm' | 'neutral' | 'cool'
+
+    // Phase 5: Home Planning & Layout
+    plot: {
+        width: number
+        depth: number
+        unit: 'ft' | 'm'
+    }
+    setbacks: {
+        front: number
+        back: number
+        left: number
+        right: number
+    }
+    orientation: 'N' | 'S' | 'E' | 'W' | 'NE' | 'NW' | 'SE' | 'SW'
+    rooms: Room[]
+    smartHome: boolean
+    materialTier: 'economy' | 'standard' | 'premium'
+    ventilationPlan: boolean // Renaming/Confirming if this is distinct or same as smartHome-like feature
+    ventilationType: 'natural' | 'mechanical' | 'hybrid'
+}
+
+export interface Room {
+    id: string
+    name: string
+    type: 'living' | 'kitchen' | 'bedroom' | 'bathroom' | 'dining' | 'study' | 'other'
+    floor: number
+    width: number
+    depth: number
+    // Additional refined properties usually needed for logic, kept simple for now
 }
 
 export interface Project {
@@ -56,6 +85,8 @@ interface BuildingState {
     deleteProject: (id: string) => void
     loadProject: (project: Project) => void
     resetParams: () => void
+    screenshotTrigger: number
+    triggerScreenshot: () => void
 }
 
 const defaultParams: BuildingParams = {
@@ -77,6 +108,18 @@ const defaultParams: BuildingParams = {
     interiorLightTemp: 'warm', // New default
     footprintShape: 'rectangular',
     floorCount: 2,
+    // Phase 5 Defaults
+    plot: { width: 40, depth: 60, unit: 'ft' }, // Default plot size
+    setbacks: { front: 5, back: 5, left: 3, right: 3 }, // Typical setbacks
+    orientation: 'N',
+    rooms: [
+        { id: '1', name: 'Living Room', type: 'living', floor: 1, width: 16, depth: 14 },
+        { id: '2', name: 'Kitchen', type: 'kitchen', floor: 1, width: 12, depth: 10 }
+    ],
+    smartHome: false,
+    materialTier: 'standard',
+    ventilationPlan: true,
+    ventilationType: 'natural'
 }
 
 export const useBuildingStore = create<BuildingState>((set) => {
@@ -96,7 +139,21 @@ export const useBuildingStore = create<BuildingState>((set) => {
         hoveredElement: null,
         selectedElement: null,
         setParams: (newParams) =>
-            set((state) => ({ params: { ...state.params, ...newParams } })),
+            set((state) => {
+                const mergedParams = { ...state.params, ...newParams }
+
+                // Auto-calculate Building Dimensions based on Plot & Setbacks
+                // We do this if plot or setbacks are touched, OR if we just want to enforce the constraint strictly.
+                // Constraint: Building Width = Plot Width - Left - Right
+                const derivedWidth = mergedParams.plot.width - mergedParams.setbacks.left - mergedParams.setbacks.right
+                const derivedDepth = mergedParams.plot.depth - mergedParams.setbacks.front - mergedParams.setbacks.back
+
+                // Ensure dimensions don't go negative or absurdly small
+                mergedParams.width = Math.max(4, derivedWidth)
+                mergedParams.depth = Math.max(4, derivedDepth)
+
+                return { params: mergedParams }
+            }),
         setViewMode: (mode) => set({ viewMode: mode }),
         setLightingMode: (mode) => set({ lightingMode: mode }),
         setActiveFloor: (floor) => set({ activeFloor: floor }),
@@ -131,5 +188,7 @@ export const useBuildingStore = create<BuildingState>((set) => {
             hoveredElement: null,
             selectedElement: null
         }),
+        screenshotTrigger: 0,
+        triggerScreenshot: () => set((state) => ({ screenshotTrigger: state.screenshotTrigger + 1 })),
     }
 })

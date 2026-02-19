@@ -82,22 +82,53 @@ export function parsePrompt(prompt: string): BuildingParams {
 
         // Interior Settings
         furnitureDensity: 'standard',
-        interiorLightTemp: 'warm'
+        interiorLightTemp: 'warm',
+
+        // New Fields Defaulting (mock values for prompt generation)
+        plot: { width: 50, depth: 70, unit: 'ft' },
+        setbacks: { front: 5, back: 5, left: 3, right: 3 },
+        orientation: 'N',
+        rooms: [
+            { id: '1', name: 'Living Room', type: 'living', floor: 1, width: 16, depth: 14 },
+            { id: '2', name: 'Kitchen', type: 'kitchen', floor: 1, width: 12, depth: 10 }
+        ],
+        smartHome: p.includes('smart'),
+        materialTier: isLarge ? 'premium' : 'standard',
+        ventilationPlan: true,
+        ventilationType: 'natural'
     }
 
 }
 
 export function calculateCost(params: BuildingParams): number {
+    // Base Structure Cost
     const area = params.width * params.depth + (params.wingParams ? params.wingParams.width * params.wingParams.depth : 0)
     const volume = area * params.height
-    const materialFactor = params.facadeMaterial === 'concrete' ? 1.2 : 1.0
 
-    // Base cost + volume cost
-    return Math.floor(50000 + (volume * 200 * materialFactor))
+    // Tier Multiplier
+    const tierMultipliers = { economy: 0.8, standard: 1.0, premium: 1.5 }
+    const tier = tierMultipliers[params.materialTier] || 1.0
+
+    let cost = 50000 + (volume * 200)
+
+    // Systems Cost
+    if (params.smartHome) cost += 15000
+    if (params.ventilationPlan) cost += 8000
+
+    // Room Complexity Cost (Partitioning, finishing)
+    cost += params.rooms.length * 5000
+
+    return Math.floor(cost * tier)
 }
 
 export function calculateTimeline(params: BuildingParams): string {
-    const area = params.width * params.depth + (params.wingParams ? params.wingParams.width * params.wingParams.depth : 0)
-    const weeks = Math.ceil((area * params.height) / 100)
+    const area = params.width * params.depth
+    let weeks = Math.ceil((area * params.height) / 150) // Refined baseline
+
+    // Add time for complexity
+    if (params.floorCount > 1) weeks += 2
+    if (params.smartHome) weeks += 1
+    if (params.rooms.length > 5) weeks += 1
+
     return `${weeks} weeks`
 }

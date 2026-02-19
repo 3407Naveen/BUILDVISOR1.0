@@ -109,10 +109,46 @@ export function BuildingRenderer() {
 
     const showRoof = viewMode === 'exterior' && (activeFloor === null || activeFloor === params.floorCount)
 
+    // Calculate Building Position relative to Plot Center
+    // Plot Center is (0,0).
+    // Top-Left of Plot is (-plotW/2, -plotD/2) if we assume Z is depth.
+    // Let's assume standard orientation: Width is X, Depth is Z.
+    // "Front" setback pushes from Z- (or Z+ depending on street). Let's assume Street is at +Z for now (common in easy 3D previz).
+    // Actually, usually Street is 'Front'. If street is at +Z, "Front Setback" means pushing away from +Z towards -Z.
+    // Let's maximize usability: "Front" usually means the side with the door.
+    // Let's Place the Plot Center at (0,0).
+    const plotW = params.plot.width
+    const plotD = params.plot.depth
+    const setL = params.setbacks.left
+    const setR = params.setbacks.right
+    const setF = params.setbacks.front // Front
+    const setB = params.setbacks.back  // Back
+
+    // Building Dimensions (already calculated in store, but good to know)
+    const buildW = params.width
+    const buildD = params.depth
+
+    // If Plot Center is 0,0:
+    // West Edge (Left) is -plotW/2. Step in by setL -> x = -plotW/2 + setL + buildW/2
+    const centerX = (-plotW / 2) + setL + (buildW / 2)
+
+    // South Edge (Front) is +plotD/2 (if Z+ is forward). Step in by setF -> z = plotD/2 - setF - (buildD / 2)
+    const centerZ = (plotD / 2) - setF - (buildD / 2)
+
     return (
         <group>
-            {/* --- MAIN MASS --- */}
-            <group position={[0, 0, 0]}>
+            {/* Visualizing the Plot Boundary */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]}>
+                <planeGeometry args={[plotW, plotD]} />
+                <meshStandardMaterial color="#0c0a09" transparent opacity={0.2} />
+                <lineSegments>
+                    <edgesGeometry args={[new THREE.PlaneGeometry(plotW, plotD)]} />
+                    <lineBasicMaterial color="#3b82f6" transparent opacity={0.3} />
+                </lineSegments>
+            </mesh>
+
+            {/* --- MAIN MASS with Offset --- */}
+            <group position={[centerX, 0, centerZ]}>
                 {/* Core Mass - Walls */}
                 <mesh
                     position={[0, params.height / 2 + params.foundationHeight, 0]}
@@ -131,6 +167,33 @@ export function BuildingRenderer() {
                     <boxGeometry args={[params.width + 0.6, params.foundationHeight, params.depth + 0.6]} />
                 </mesh>
 
+                {/* Smart Home Nodes */}
+                {params.smartHome && (
+                    <group>
+                        {/* Corners */}
+                        {[-1, 1].map(x => [-1, 1].map(z => (
+                            <mesh key={`${x}-${z}`} position={[x * (params.width / 2 - 0.2), params.height - 0.5, z * (params.depth / 2 - 0.2)]}>
+                                <sphereGeometry args={[0.15]} />
+                                <meshBasicMaterial color="#60a5fa" toneMapped={false} />
+                                <pointLight color="#60a5fa" distance={3} intensity={2} />
+                            </mesh>
+                        )))}
+                    </group>
+                )}
+
+                {/* Ventilation Vents */}
+                {params.ventilationPlan && (
+                    <group>
+                        {/* Side Vents */}
+                        {[-1, 1].map(x => (
+                            <mesh key={`vent-${x}`} position={[x * (params.width / 2 + 0.05), params.height - 1, 0]} rotation={[0, x > 0 ? -Math.PI / 2 : Math.PI / 2, 0]}>
+                                <boxGeometry args={[1, 0.4, 0.1]} />
+                                <meshStandardMaterial color="#64748b" />
+                            </mesh>
+                        ))}
+                    </group>
+                )}
+
                 {/* Roof - Conditional Visibility */}
                 {showRoof && (
                     <Roof
@@ -148,11 +211,23 @@ export function BuildingRenderer() {
 
                 {/* Floor-based Details */}
                 {renderFloors(params.width, params.depth, 0, 0)}
+
+                {/* --- INTERIOR (Nested to move with house) --- */}
+                {viewMode === 'interior' && (
+                    <group position={[0, params.foundationHeight, 0]}>
+                        <InteriorRenderer />
+                    </group>
+                )}
             </group>
 
-            {/* --- WING MASS (L-Shape) --- */}
+            {/* --- WING MASS (L-Shape) - adjusted relative to main mass or kept simple --- */}
+            {/* For now, let's keep Wing relative to the Main Mass position we just calculated.
+                If the main mass moves, the wing should move with it. 
+                However, L-shape logic usually implies the wing helps define the footprint. 
+                Logic refactor: The main mass is the anchor. 
+             */}
             {params.footprintShape === 'L-shape' && params.wingParams && (
-                <group position={[params.width / 2 + params.wingParams.width / 2 - 0.2, 0, params.depth / 2 - params.wingParams.depth / 2]}>
+                <group position={[centerX + params.width / 2 + params.wingParams.width / 2 - 0.2, 0, centerZ + params.depth / 2 - params.wingParams.depth / 2]}>
                     {/* Core */}
                     <mesh position={[0, params.height / 2 + params.foundationHeight, 0]} castShadow receiveShadow material={wallMat}>
                         <boxGeometry args={[params.wingParams.width, params.height, params.wingParams.depth]} />
@@ -177,21 +252,14 @@ export function BuildingRenderer() {
                 </group>
             )}
 
-            {/* --- INTERIOR --- */}
-            {viewMode === 'interior' && (
-                <group position={[0, params.foundationHeight, 0]}>
-                    <InteriorRenderer />
-                </group>
-            )}
-
             {/* --- ENVIRONMENT --- */}
             <mesh position={[0, -0.1, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
                 <circleGeometry args={[80, 64]} />
                 <meshStandardMaterial color={groundColor} roughness={1} />
             </mesh>
 
-            {/* Path */}
-            <mesh position={[0, 0.05, params.depth / 2 + 4]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+            {/* Path - Adjust to connect to the new Front Door Position */}
+            <mesh position={[centerX, 0.05, centerZ + params.depth / 2 + 4]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
                 <planeGeometry args={[2.5, 8]} />
                 <meshStandardMaterial color="#e7e5e4" />
             </mesh>
