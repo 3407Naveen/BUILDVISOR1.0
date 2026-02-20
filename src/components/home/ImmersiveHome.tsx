@@ -879,8 +879,11 @@ function useIsLowEnd() {
     const [lowEnd, setLowEnd] = useState(false)
     useEffect(() => {
         const nav = navigator as Navigator & { deviceMemory?: number }
-        if ((nav.deviceMemory && nav.deviceMemory < 4) || navigator.hardwareConcurrency <= 2) setLowEnd(true)
-        if (/Android|iPhone|iPad/i.test(navigator.userAgent)) setLowEnd(true)
+        // Only mark as low end if memory is really low or it's a very old CPU
+        if ((nav.deviceMemory && nav.deviceMemory < 2) || navigator.hardwareConcurrency <= 2) {
+            setLowEnd(true)
+        }
+        // Removed explicit mobile check that was disabling 3D scene
     }, [])
     return lowEnd
 }
@@ -892,45 +895,73 @@ export default function ImmersiveHome() {
 
     useEffect(() => {
         const onScroll = () => {
-            const maxScroll = document.documentElement.scrollHeight - window.innerHeight
-            scrollTRef.current = maxScroll > 0 ? Math.min(window.scrollY / maxScroll, 1) : 0
+            // Use window.innerHeight to account for mobile address bar
+            const viewportHeight = window.innerHeight
+            const totalHeight = document.documentElement.scrollHeight
+            const maxScroll = totalHeight - viewportHeight
+
+            if (maxScroll <= 0) {
+                scrollTRef.current = 0
+                return
+            }
+
+            // Clamping scroll and using a more robust window.scrollY
+            const currentScroll = window.pageYOffset || window.scrollY || 0
+            scrollTRef.current = Math.min(Math.max(currentScroll / maxScroll, 0), 1)
         }
+
         window.addEventListener('scroll', onScroll, { passive: true })
+        window.addEventListener('resize', onScroll) // Handle orientation changes/resize
+
         onScroll()
-        return () => window.removeEventListener('scroll', onScroll)
+        // Delay initial call to ensure layout is settled
+        const timer = setTimeout(onScroll, 100)
+
+        return () => {
+            window.removeEventListener('scroll', onScroll)
+            window.removeEventListener('resize', onScroll)
+            clearTimeout(timer)
+        }
     }, [])
 
     return (
-        <div className="relative bg-black">
+        <div className="relative bg-black min-h-screen">
             <ScrollBar />
 
             {/* 3D Scene */}
-            {!isLowEnd && (
-                <Canvas
-                    shadows
-                    dpr={[1, 1.5]}
-                    gl={{
-                        antialias: true,
-                        powerPreference: 'high-performance',
-                        toneMapping: 4,
-                        toneMappingExposure: 0.9,
-                    }}
-                    className="!fixed inset-0"
-                    style={{ zIndex: 0, width: '100vw', height: '100vh' }}
-                >
-                    <Suspense fallback={null}>
-                        <HomeScene scrollT={scrollTRef} />
-                    </Suspense>
-                </Canvas>
-            )}
+            <Canvas
+                shadows
+                // Lower DPR on mobile/low-end for performance
+                dpr={isLowEnd ? 1 : [1, 1.5]}
+                gl={{
+                    antialias: true,
+                    powerPreference: 'high-performance',
+                    toneMapping: 4,
+                    toneMappingExposure: 0.9,
+                    alpha: false, // Better performance if no transparency needed for canvas background
+                    stencil: false,
+                    depth: true
+                }}
+                className="!fixed inset-0"
+                style={{
+                    zIndex: 0,
+                    width: '100vw',
+                    height: '100vh',
+                    touchAction: 'none' // Prevent default touch behavior on canvas
+                }}
+            >
+                <Suspense fallback={null}>
+                    <HomeScene scrollT={scrollTRef} />
+                </Suspense>
+            </Canvas>
 
             {/* DOM Overlays */}
             <HeroOverlay scrollT={scrollTRef} />
             <RoomAnnouncer scrollT={scrollTRef} />
             <DoomScrollFinale scrollT={scrollTRef} />
 
-            {/* Scroll Container */}
-            <div style={{ height: '800vh', pointerEvents: 'none' }} />
+            {/* Scroll Container - relative positioning ensures it works on all browsers */}
+            <div style={{ height: '800vh', width: '100%', position: 'relative', pointerEvents: 'none', zIndex: 1 }} />
         </div>
     )
 }

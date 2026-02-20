@@ -643,12 +643,21 @@ function HomeScene({ scrollT }: { scrollT: React.MutableRefObject<number> }) {
 
     return (
         <>
-            <PerspectiveCamera makeDefault fov={62} near={0.05} far={120} position={WAYPOINTS[0].toArray()} />
+            {/* Set a base background color to avoid pure black/blank if Environment fails */}
+            <color attach="background" args={['#050810']} />
+
+            <PerspectiveCamera
+                makeDefault
+                fov={62}
+                near={0.1}
+                far={200}
+                position={WAYPOINTS[0].toArray()}
+            />
             <CameraRig scrollT={scrollT} />
             <GlobalLighting />
 
             {/* Controlled fog for depth */}
-            <fog attach="fog" args={['#050810', 40, 95]} />
+            <fog attach="fog" args={['#050810', 30, 110]} />
 
             {/* Complete house structure */}
             <HouseShell scrollT={scrollT} />
@@ -661,9 +670,10 @@ function HomeScene({ scrollT }: { scrollT: React.MutableRefObject<number> }) {
             <WorkspaceRoom show={showWork} />
             <TerraceRoom show={showTerrace} />
 
-            <AdaptiveDpr pixelated />
+            <AdaptiveDpr pixelated={false} />
             <AdaptiveEvents />
-            <Preload all />
+            {/* Limit Preload to essential bits to avoid hanging 3D on slow connections */}
+            <Preload all={false} />
         </>
     )
 }
